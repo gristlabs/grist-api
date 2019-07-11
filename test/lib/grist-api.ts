@@ -14,6 +14,7 @@
  * document test/fixtures/TestGristDocAPI.grist to Grist, and set SERVER and DOC_ID constants below
  * to point to it. Find your API key, and set GRIST_API_KEY env var to it.
  */
+// tslint:disable:object-literal-key-quotes
 
 /// <reference types="../replay" />
 import axios from 'axios';
@@ -113,5 +114,56 @@ describe("grist-api", function() {
     assertData(data, [
       ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
     ]);
+  });
+
+  it('should support updateRecords', async function() {
+    await gristApi.updateRecords('Table1', [
+      {"id": 1, "Num": -5, "Text_Field": "snapple", "ColorRef": 2},
+      {"id": 4, "Num": -1.5, "Text_Field": null, "ColorRef": 2},
+    ]);
+
+    // Note that the formula field gets updated too.
+    let data = await gristApi.fetchTable('Table1');
+    assertData(data, [
+      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
+      [1,     'snapple',    -5,     datets(2019, 6, 26),  2,          "ORANGE"],
+      [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE"],
+      [3,     'Melon',      12,     datets(2019, 4, 2),   3,          "GREEN"],
+      [4,     null,         -1.5,   datets(2019, 3, 3),   2,          "ORANGE"],
+    ]);
+
+    // Revert the changes.
+    await gristApi.updateRecords('Table1', [
+      {"id": 1, "Num": 5, "Text_Field": "Apple", "ColorRef": 1},
+      {"id": 4, "Num": 1.5, "Text_Field": "Strawberry", "ColorRef": 1},
+    ]);
+    data = await gristApi.fetchTable('Table1');
+    assertData(data, initialData.Table1);
+  });
+
+  it('should support varied updateRecords', async function() {
+    // Mismatched column sets work too.
+    await gristApi.updateRecords('Table1', [
+      {"id": 1, "Num": -5, "Text_Field": "snapple"},
+      {"id": 4, "Num": -1.5, "ColorRef": 2},
+    ]);
+
+    let data = await gristApi.fetchTable('Table1');
+    assertData(data, [
+      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
+      [1,     'snapple',    -5,     datets(2019, 6, 26),  1,          "RED"],
+      [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE"],
+      [3,     'Melon',      12,     datets(2019, 4, 2),   3,          "GREEN"],
+      [4,     'Strawberry', -1.5,   datets(2019, 3, 3),   2,          "ORANGE"],
+    ]);
+
+    // Revert the changes.
+    await gristApi.updateRecords('Table1', [
+      {"id": 1, "Num": 5, "Text_Field": "Apple"},
+      {"id": 4, "Num": 1.5, "ColorRef": 1},
+    ]);
+
+    data = await gristApi.fetchTable('Table1');
+    assertData(data, initialData.Table1);
   });
 });

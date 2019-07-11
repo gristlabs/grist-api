@@ -113,6 +113,39 @@ export class GristDocAPI {
   }
 
   /**
+   * Update existing records in the given table. The data is a list of objects, with attributes
+   * corresponding to the columns in the table. Each record must contain the key "id" with the
+   * rowId of the row to update.
+   *
+   * If records aren't all for the same set of columns, then a single-call update is impossible,
+   * so we'll make multiple calls.
+   * When groupIfNeeded is set, we'll make multiple calls. Otherwise, will raise an exception.
+   *
+   * If chunkSize is given, we'll make multiple requests, each limited to chunkSize rows.
+   */
+  public async updateRecords(tableName: string, records: IRecord[], chunkSize: number = Infinity): Promise<void> {
+    const groups = new Map<string, IRecord[]>();
+    for (const rec of records) {
+      if (!rec.id || typeof rec.id !== 'number') {
+        throw new Error("updateRecord requires numeric 'id' attribute in each record");
+      }
+      const key = JSON.stringify(Object.keys(rec).sort());
+      const group = groups.get(key) || groups.set(key, []).get(key)!;
+      group.push(rec);
+    }
+
+    const callData: ITableData[] = [];
+    for (const groupRecords of groups.values()) {
+      callData.push(...chunk(groupRecords, chunkSize).map((recs) => makeTableData(recs)));
+    }
+
+    for (const data of callData) {
+      debug("updateRecods %s %s", tableName, descColValues(data));
+      await this._call(`tables/${tableName}/data`, data, 'PATCH');
+    }
+  }
+
+  /**
    * Low-level interface to make a REST call.
    */
   private async _call(url: string, jsonData?: object, method?: Method, prefix?: string) {
