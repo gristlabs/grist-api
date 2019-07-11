@@ -1,0 +1,17 @@
+GET /o/docs-8/api/docs/28a446f2-903e-4bd4-8001-1dbd3a68e5a5/tables/Table1/data?filter=%7B%22Num%22%3A%5B2%5D%7D
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support addRecords and deleteRecords/1
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type
+content-type: application/json; charset=utf-8
+content-length: 183
+etag: W/"b7-BC640K419qGLbvvPwSqUy2f4Aj8"
+date: Thu, 11 Jul 2019 03:47:18 GMT
+connection: close
+
+{"id":[5,6],"manualSort":[5,6],"ColorRef":[3,0],"gristHelper_Display2":["Green",""],"Num":[2,2],"Text_Field":["Eggs","Beets"],"Date":[1547683200,null],"ColorRef_Value":["GREEN",null]}

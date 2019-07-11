@@ -1,0 +1,18 @@
+POST /o/docs-8/api/docs/28a446f2-903e-4bd4-8001-1dbd3a68e5a5/tables/Table1/data
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support addRecords and deleteRecords/0
+body: {\"Text_Field\":[\"Eggs\",\"Beets\"],\"Num\":[2,2],\"ColorRef\":[3,null],\"Date\":[1547683200,null]}
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type
+content-type: application/json; charset=utf-8
+content-length: 5
+etag: W/"5-3jQgRQkkJsayENfC5SHCYuZ0SAc"
+date: Thu, 11 Jul 2019 03:47:18 GMT
+connection: close
+
+[5,6]
