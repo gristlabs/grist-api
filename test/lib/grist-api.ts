@@ -34,7 +34,7 @@ Replay.headers  = (Replay.headers as RegExp[]).filter((r) => !/auth/i.test(r.sou
 
 const SERVER = "http://localhost:8080/o/docs-8";
 const DOC_ID = "28a446f2-903e-4bd4-8001-1dbd3a68e5a5";
-const LIVE = Boolean(process.env.REPLAY === 'record');
+const LIVE = Boolean(process.env.REPLAY && process.env.REPLAY !== 'replay');
 
 const initialData = {
   Table1: [
@@ -163,6 +163,63 @@ describe("grist-api", function() {
       {"id": 4, "Num": 1.5, "ColorRef": 1},
     ]);
 
+    data = await gristApi.fetchTable('Table1');
+    assertData(data, initialData.Table1);
+  });
+
+  it('should support syncTable', async function() {
+    await gristApi.syncTable('Table1', [
+      {Text_Field: 'Apple', Num: 17, Date: datets(2020, 5, 1)},
+      {Text_Field: 'Banana', Num: 33, Date: datets(2020, 5, 2)},
+      {Text_Field: 'Melon', Num: 28, Date: null},
+    ], ['Text_Field']);
+
+    let data = await gristApi.fetchTable('Table1');
+    assertData(data, [
+      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
+      [1,     'Apple',      17,     datets(2020, 5, 1),   1,          "RED"],
+      [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE"],
+      [3,     'Melon',      28,     null,                 3,          "GREEN"],
+      [4,     'Strawberry', 1.5,    datets(2019, 3, 3),   1,          "RED"],
+      [5,     'Banana',     33,     datets(2020, 5, 2),   0,          null],
+    ]);
+
+    // Revert data, and delete the newly-added record.
+    await gristApi.syncTable('Table1', [
+      {Text_Field: 'Apple', Num: 5, Date: datets(2019, 6, 26)},
+      {Text_Field: 'Melon', Num: 12, Date: datets(2019, 4, 2)},
+    ], ['Text_Field']);
+    await gristApi.deleteRecords('Table1', [5]);
+
+    // Check we are back to where we started.
+    data = await gristApi.fetchTable('Table1');
+    assertData(data, initialData.Table1);
+  });
+
+  it('should support syncTable with filters', async function() {
+    await gristApi.syncTable('Table1', [
+      {Text_Field: 'Melon', Num: 100, Date: datets(2020, 6, 1)},
+      {Text_Field: 'Strawberry', Num: 200, Date: datets(2020, 6, 2)},
+    ], ['Text_Field'], {filters: {"ColorRef": [1]}});
+
+    // Note that Melon got added because it didn't exist in the filtered view.
+    let data = await gristApi.fetchTable('Table1');
+    assertData(data, [
+      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
+      [1,     'Apple',      5,      datets(2019, 6, 26),  1,          "RED"],
+      [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE"],
+      [3,     'Melon',      12,     datets(2019, 4, 2),   3,          "GREEN"],
+      [4,     'Strawberry', 200,    datets(2020, 6, 2),   1,          "RED"],
+      [5,     'Melon',      100,    datets(2020, 6, 1),   0,          null],
+    ]);
+
+    // Revert data, and delete the newly-added record.
+    await gristApi.syncTable('Table1', [
+      {Text_Field: 'Strawberry', Num: 1.5, Date: datets(2019, 3, 3)},
+    ], ['Text_Field'], {filters: {"ColorRef": [1]}});
+    await gristApi.deleteRecords('Table1', [5]);
+
+    // Check we are back to where we started.
     data = await gristApi.fetchTable('Table1');
     assertData(data, initialData.Table1);
   });

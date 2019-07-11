@@ -6,11 +6,14 @@ import * as _debug from 'debug';
 import * as fse from 'fs-extra';
 import chunk = require('lodash/chunk');
 import mapValues = require('lodash/mapValues');
+import pick = require('lodash/pick');
 import * as os from 'os';
 import * as path from 'path';
 
 const debug = _debug('grist-api');
 const debugReq = _debug('grist-api:requests');
+
+// TODO set a better default chunkSize
 
 // Type for values in Grist data cells.
 export type CellValue = number|string|boolean|null|[string, any];
@@ -20,6 +23,11 @@ export interface IRecord { [colId: string]: CellValue; }
 
 // Type used by Grist for table data in its API calls, mapping column name to list of values.
 export interface ITableData { [colId: string]: CellValue[]; }
+
+// Maps colIds to set of values to include when filtering. The arrays of values will often contain
+// a single value. (The type only happens to match ITableData, but has different meaning. In
+// particular, arrays of values don't have to be parallel in IFilterSpec.)
+export interface IFilterSpec { [colId: string]: CellValue[]; }
 
 export async function getAPIKey(): Promise<string> {
   if (process.env.GRIST_API_KEY) {
@@ -71,7 +79,7 @@ export class GristDocAPI {
    * If filters is given, it should be a dictionary mapping column names to values, to fetch only
    * records that match.
    */
-  public async fetchTable(tableName: string, filters?: {[colId: string]: CellValue[]}): Promise<IRecord[]> {
+  public async fetchTable(tableName: string, filters?: IFilterSpec): Promise<IRecord[]> {
     const query = filters ? `?filter=${encodeURIComponent(JSON.stringify(filters))}` : '';
     const data: ITableData = await this._call(`tables/${tableName}/data${query}`);
     // Convert column-oriented data to list of records.
@@ -143,6 +151,66 @@ export class GristDocAPI {
       debug("updateRecods %s %s", tableName, descColValues(data));
       await this._call(`tables/${tableName}/data`, data, 'PATCH');
     }
+  }
+
+  /**
+   * Updates Grist table with new data, updating existing rows or adding new ones, matching rows on
+   * the given key columns. (This method does not remove rows from Grist.)
+   *
+   * New data is a list of objects with column IDs as attributes.
+   *
+   * keyColIds parameter lists primary-key columns, which must be present in the given records.
+   *
+   * If chunkSize is given, individual requests will be limited to chunkSize rows each.
+   *
+   * If filters is given, it should be a dictionary mapping colIds to values. Only records
+   * matching these filters will be matched as candidates for existing rows to update. New records
+   * whose columns don't match filters will be ignored.
+   */
+  public async syncTable(
+    tableName: string, records: IRecord[], keyColIds: string[],
+    options: {chunkSize?: number, filters?: IFilterSpec} = {},
+  ): Promise<void> {
+    const filters = options.filters;
+
+    // Maps unique keys to Grist rows
+    const gristRows = new Map<string, IRecord>();
+    for (const oldRec of await this.fetchTable(tableName, filters)) {
+      const key = JSON.stringify(keyColIds.map((colId) => oldRec[colId]));
+      gristRows.set(key, oldRec);
+    }
+
+    const updateList: IRecord[] = [];
+    const addList: IRecord[] = [];
+    let dataCount = 0;
+    let filteredOut = 0;
+    for (const newRec of records) {
+      if (filters && keyColIds.some((colId) => filters[colId] && !filters[colId].includes(newRec[colId]))) {
+        filteredOut += 1;
+        continue;
+      }
+      dataCount += 1;
+      const key = JSON.stringify(keyColIds.map((colId) => newRec[colId]));
+      const oldRec = gristRows.get(key);
+      if (oldRec) {
+        const changedKeys = Object.keys(newRec).filter((colId) => newRec[colId] !== oldRec[colId]);
+        if (changedKeys.length > 0) {
+          debug("syncTable %s: #%s %s needs updates", tableName, oldRec.id, key,
+            changedKeys.map((colId) => [colId, oldRec[colId], newRec[colId]]));
+          const update: IRecord = pick(newRec, changedKeys);
+          update.id = oldRec.id;
+          updateList.push(update);
+        }
+      } else {
+        debug("syncTable %s: %s not in grist", tableName, key);
+        addList.push(newRec);
+      }
+    }
+
+    debug("syncTable %s (%s) with %s records (%s filtered out): %s updates, %s new",
+      tableName, gristRows.size, dataCount, filteredOut, updateList.length, addList.length);
+    await this.updateRecords(tableName, updateList, options.chunkSize);
+    await this.addRecords(tableName, addList, options.chunkSize);
   }
 
   /**

@@ -1,0 +1,17 @@
+GET /o/docs-8/api/docs/28a446f2-903e-4bd4-8001-1dbd3a68e5a5/tables/Table1/data
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support syncTable with filters/3
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type
+content-type: application/json; charset=utf-8
+content-length: 324
+etag: W/"144-+eBhBzvrzkVnLXFM9fv5eMWqorM"
+date: Thu, 11 Jul 2019 06:13:38 GMT
+connection: close
+
+{"id":[1,2,3,4,5],"manualSort":[1,2,3,4,5],"ColorRef":[1,2,3,1,0],"gristHelper_Display2":["Red","Orange","Green","Red",""],"Num":[5,8,12,200,100],"Text_Field":["Apple","Orange","Melon","Strawberry","Melon"],"Date":[1561507200,1556668800,1554163200,1591056000,1590969600],"ColorRef_Value":["RED","ORANGE","GREEN","RED",null]}
