@@ -66,8 +66,7 @@ export class GristDocAPI {
   private _chunkSize: number;
 
   /**
-   * The constructor is private. Use GristDocAPI.create() instead. (It is separate because
-   * involves an possible async call.)
+   * Create a GristDocAPI object. See documentation of IGristCallConfig for options.
    */
   constructor(private _docId: string, options: IGristCallConfig = {}) {
     this._dryrun = Boolean(options.dryrun);
@@ -129,7 +128,6 @@ export class GristDocAPI {
    *
    * If records aren't all for the same set of columns, then a single-call update is impossible,
    * so we'll make multiple calls.
-   * When groupIfNeeded is set, we'll make multiple calls. Otherwise, will raise an exception.
    */
   public async updateRecords(tableName: string, records: IRecord[]): Promise<void> {
     const groups = new Map<string, IRecord[]>();
