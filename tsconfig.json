@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "lib",
+    "module": "commonjs",
+    "plugins": [{
+      "name": "typescript-tslint-plugin"
+    }]
+  },
+  "include": [
+    "lib/"
+  ]
+}
