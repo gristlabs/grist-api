@@ -74,12 +74,12 @@ The options are:
 Fetch all data in the table by the given name, returning a list of records with attributes
 corresponding to the columns in that table.
 
-If filters is given, it should be a dictionary mapping column names to array values, to fetch only
+If filters is given, it should be an object mapping column names to array values, to fetch only
 records that match. For example `{Name: ['eggs']}`.
 
 ### addRecords(tableName, records)
 
-Adds new records to the given table. The data is a list of dictionaries, with keys
+Adds new records to the given table. The data is a list of objects, with attributes
 corresponding to the columns in the table. Returns a list of added rowIds.
 
 ### deleteRecords(tableName, recordIds)
@@ -89,7 +89,7 @@ Deletes records from the given table. The data is a list of record IDs.
 ### updateRecords(tableName, records)
 
 Update existing records in the given table. The data is a list of objects, with attributes
-corresponding to the columns in the table. Each record must contain the key "id" with the
+corresponding to the columns in the table. Each object must contain the key "id" with the
 rowId of the row to update.
 
 If records aren't all for the same set of columns, then a single-call update is impossible,
@@ -100,10 +100,11 @@ so we'll make multiple calls.
 Updates Grist table with new data, updating existing rows or adding new ones, matching rows on
 the given key columns. (This method does not remove rows from Grist.)
 
-New data is a list of objects with column IDs as attributes.
+The `records` parameter is a list of objects with column IDs as attributes.
 
 The `keyColIds` parameter lists primary-key columns, which must be present in the given records.
 
-If `options.filters` is given, it should be a dictionary mapping colIds to values. Only records
-matching these filters will be matched as candidates for existing rows to update. New records
-whose columns don't match filters will be ignored.
+If `options.filters` is given, it should be an object mapping colIds to arrays
+of values. Only records matching these filters will be matched as candidates
+for existing rows to update. New records whose columns don't match filters will
+be ignored.

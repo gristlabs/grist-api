@@ -1,5 +1,5 @@
 /**
- * The test is intended to test the behavior of the library, i.e. translating python calls to HTTP
+ * The test is intended to test the behavior of the library, i.e. translating javascript calls to HTTP
  * requests and interpreting the results. But we can only know it's correct by sending these
  * requests to an actual Grist instance and checking their effects.
  *

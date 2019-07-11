@@ -156,6 +156,9 @@ export class GristDocAPI {
 
     for (const data of callData) {
       debug("updateRecods %s %s", tableName, descColValues(data));
+      // If a call fails, other calls won't run. TODO we should think of how to do better, perhaps
+      // with undo of actions that did succeed (but that has dangers if other code ran in the
+      // meantime), or better figuring out a path to transactions.
       await this._call(`tables/${tableName}/data`, data, 'PATCH');
     }
   }
@@ -190,6 +193,7 @@ export class GristDocAPI {
     let dataCount = 0;
     let filteredOut = 0;
     for (const newRec of records) {
+      // If we have any filters on keyColIds, ignore new records which don't match those filters.
       if (filters && keyColIds.some((colId) => filters[colId] && !filters[colId].includes(newRec[colId]))) {
         filteredOut += 1;
         continue;
@@ -198,6 +202,8 @@ export class GristDocAPI {
       const key = JSON.stringify(keyColIds.map((colId) => newRec[colId]));
       const oldRec = gristRows.get(key);
       if (oldRec) {
+        // TODO: This considers non-primitive values always distinct (e.g. ['d', 1234567]). On the
+        // other hand, it's unclear if non-primitive values are ever useful.
         const changedKeys = Object.keys(newRec).filter((colId) => newRec[colId] !== oldRec[colId]);
         if (changedKeys.length > 0) {
           debug("syncTable %s: #%s %s needs updates", tableName, oldRec.id, key,
@@ -214,6 +220,8 @@ export class GristDocAPI {
 
     debug("syncTable %s (%s) with %s records (%s filtered out): %s updates, %s new",
       tableName, gristRows.size, dataCount, filteredOut, updateList.length, addList.length);
+    // TODO As for other calls, without transactions, we can be left with only a partial sync if
+    // there is an error.
     await this.updateRecords(tableName, updateList);
     await this.addRecords(tableName, addList);
   }
@@ -240,7 +248,7 @@ export class GristDocAPI {
         method,
         data: jsonData,
         headers: {
-          'Authorization': `Bearer ${await this._apiKey}`,
+          'Authorization': `Bearer ${this._apiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
