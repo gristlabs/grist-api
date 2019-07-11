@@ -1,6 +1,7 @@
 # grist-api
 
 [![npm version](https://badge.fury.io/js/grist-api.svg)](https://badge.fury.io/js/grist-api)
+[![Build Status](https://travis-ci.org/gristlabs/grist-api.svg?branch=master)](https://travis-ci.org/gristlabs/grist-api)
 
 > NodeJS client for interacting with Grist.
 
