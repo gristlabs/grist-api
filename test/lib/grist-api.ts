@@ -37,8 +37,7 @@ Replay.reset('localhost');
 // Do not record the Authorization header.
 Replay.headers  = (Replay.headers as RegExp[]).filter((r) => !/auth/i.test(r.source));
 
-const SERVER = "http://localhost:8080/o/docs-8";
-const DOC_ID = "28a446f2-903e-4bd4-8001-1dbd3a68e5a5";
+const DOC_URL = "http://localhost:8080/o/docs-8/doc/28a446f2-903e-4bd4-8001-1dbd3a68e5a5";
 const LIVE = Boolean(process.env.REPLAY && process.env.REPLAY !== 'replay');
 
 const initialData = {
@@ -70,7 +69,7 @@ describe("grist-api", function() {
   let requestNum: number = 0;
 
   before(function() {
-    gristApi = new GristDocAPI(DOC_ID, {server: SERVER, apiKey: LIVE ? undefined : "unused"});
+    gristApi = new GristDocAPI(DOC_URL, {apiKey: LIVE ? undefined : "unused"});
   });
 
   beforeEach(async function() {
@@ -240,8 +239,7 @@ describe("grist-api", function() {
     let startRequestNum: number;
 
     // tslint:disable-next-line:no-shadowed-variable
-    const gristApi = new GristDocAPI(DOC_ID,
-      {server: SERVER, apiKey: LIVE ? undefined : "unused", chunkSize: 12});
+    const gristApi = new GristDocAPI(DOC_URL, {apiKey: LIVE ? undefined : "unused", chunkSize: 12});
 
     startRequestNum = requestNum;
     const rowNums = await gristApi.addRecords(

@@ -13,8 +13,6 @@ import * as path from 'path';
 const debug = _debug('grist-api');
 const debugReq = _debug('grist-api:requests');
 
-// TODO set a better default chunkSize
-
 // Type for values in Grist data cells.
 export type CellValue = number|string|boolean|null|[string, any];
 
@@ -61,18 +59,29 @@ export interface IGristCallConfig {
  */
 export class GristDocAPI {
   private _dryrun: boolean;
+  private _docId: string;
   private _server: string;
   private _apiKey: string|null;
   private _chunkSize: number;
 
   /**
-   * Create a GristDocAPI object. See documentation of IGristCallConfig for options.
+   * Create a GristDocAPI object. You may specify either a doc URL, or just the doc ID (the part
+   * of the URL after "/doc/"). If you specify a URL, then options.server is unneeded and ignored.
+   *
+   * See documentation of IGristCallConfig for options.
    */
-  constructor(private _docId: string, options: IGristCallConfig = {}) {
+  constructor(docUrlOrId: string, options: IGristCallConfig = {}) {
     this._dryrun = Boolean(options.dryrun);
     this._server = options.server || 'https://api.getgrist.com';
     this._apiKey = options.apiKey || null;
     this._chunkSize = options.chunkSize || 500;
+    const match = /^(https?:.*)\/doc\/([^\/#]+)/.exec(docUrlOrId);
+    if (match) {
+      this._server = match[1];
+      this._docId = match[2];
+    } else {
+      this._docId = docUrlOrId;
+    }
   }
 
   /**

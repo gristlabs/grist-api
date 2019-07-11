@@ -14,34 +14,38 @@ package](https://pypi.org/project/grist-api/).
 npm install grist-api
 ```
 
-## Usage
+## Usage Example
 
-```
+```javascript
 const {GristDocAPI} = require('grist-api');
 
-const SERVER = "https://subdomain.getgrist.com"         # Your org goes here
-const DOC_ID = "9dc7e414-2761-4ef2-bc28-310e634754fb"   # Document ID goes here
+// Put here the URL of your document.
+const DOC_URL = "https://subdomain.getgrist.com/doc/12345678-2761-4ef2-bc28-310e634754fb";
 
-const api = new GristDocAPI(DOC_ID, {server: SERVER});
+async function main() {
+  const api = new GristDocAPI(DOC_URL);
+  // Add some rows to a table
+  await api.addRecords('Food', [
+    {Name: 'eggs', AmountToBuy: 12},
+    {Name: 'beets', AmountToBuy: 1},
+  ]);
 
-// Add some rows to a table
-api.addRecords('Food', [
-  {Name: 'eggs', AmountToBuy: 12},
-  {Name: 'beets', AmountToBuy: 1},
-]);
+  // Fetch all rows.
+  const data = await api.fetchTable('Food');
+  console.log(data);
 
-// Fetch all rows.
-const data = await api.fetchTable('Food');
-console.log(data);
+  // Sync data by a key column.
+  await api.syncTable('Food', [{Name: 'eggs', AmountToBuy: 0}], ['Name']);
+}
 
-// Sync data by a key column.
-await api.syncTable('Food', [{Name: 'eggs', AmountToBuy: 0}], ['Name']);
+main();
 ```
 
 To run this, first prepare a Grist doc to play with:
   1. Create a Grist doc
   2. Add a table named `Food` with columns `Name` and `AmountToBuy`
-  3. Set `DOC_ID` in the code above to that of your document (the part of the URL after "/doc/").
+  3. Set `DOC_URL` in the code above to that of your document (the part after doc ID doesn't
+     matter).
 
 To use the API, you need to get your API key in Grist from Profile Settings. Run the code above
 with `GRIST_API_KEY=<key>` in the shell environment. The key may also be stored to
@@ -49,12 +53,16 @@ with `GRIST_API_KEY=<key>` in the shell environment. The key may also be stored 
 
 ## Classes and methods
 
-### new GristDocAPI(docId, options)
+### new GristDocAPI(docUrlOrId, options)
 
-Create an API instance. The doc ID is the part of the document URL after "/doc/". The options are:
+Create an API instance. You may specify either a doc URL, or just the doc ID (the part
+of the URL after "/doc/"). If you specify a URL, then `options.server` is unneeded and ignored.
+
+The options are:
   - `apiKey` (string) The API key, available in Grist from Profile Settings. If omitted, will be taken from
     `GRIST_API_KEY` env var, or `~/.grist-api-key` file.
-  - `server` (string) The server URL, i.e. the part of the document URL before "/doc/".
+  - `server` (string) The server URL, i.e. the part of the document URL before "/doc/". Ignored if
+    you specify a full URL for the first argument.
   - `dryrun` (boolean) If set, will not make any changes to the doc. You may run with
     `DEBUG=grist-api` to see what calls it would make.
   - `chunkSize` (number, default: 500) Split large requests into smaller one, each limited to
