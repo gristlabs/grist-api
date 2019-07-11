@@ -19,9 +19,14 @@
 /// <reference types="../replay" />
 import axios from 'axios';
 import {assert} from 'chai';
+import * as chai from 'chai';
+import * as chaiAsPromised from 'chai-as-promised';
+import range = require('lodash/range');
 import * as path from 'path';
 import * as Replay from 'replay';
 import {CellValue, GristDocAPI, IRecord} from '../../lib';
+
+chai.use(chaiAsPromised);
 
 // Set where Replay will record requests, with REPLAY=record env var.
 Replay.fixtures = path.join(path.dirname(__dirname), '/fixtures/replay');
@@ -58,18 +63,21 @@ function datets(year: number, month1based: number, day: number): number {
 }
 
 describe("grist-api", function() {
+  this.timeout(10000);
+
   let gristApi: GristDocAPI;
   let interceptor: number;
+  let requestNum: number = 0;
 
-  before(async function() {
-    gristApi = await GristDocAPI.create(DOC_ID, {server: SERVER, apiKey: LIVE ? undefined : "unused"});
+  before(function() {
+    gristApi = new GristDocAPI(DOC_ID, {server: SERVER, apiKey: LIVE ? undefined : "unused"});
   });
 
   beforeEach(async function() {
     // Include a per-test sequential value into each request, so that the replay module doesn't
     // reuse requests (e.g. fetchTable calls produce different results after changes to doc).
     const testName = this.currentTest!.fullTitle();
-    let requestNum = 0;
+    requestNum = 0;
     interceptor = axios.interceptors.request.use((config) => {
       config.headers['X-Request-Num'] = `${testName}/${requestNum++}`;
       return config;
@@ -222,5 +230,56 @@ describe("grist-api", function() {
     // Check we are back to where we started.
     data = await gristApi.fetchTable('Table1');
     assertData(data, initialData.Table1);
+  });
+
+  it('should support chunking', async function() {
+    // Using chunk_size should produce 5 requests (4 of 12 records, and 1 of 2). We can tell that
+    // by examining the recorded fixture in "test/fixtures/replay/test_chunking", and we test by
+    // using the requestNum variable, incremented for each request by axios interceptor.
+    const myRange = range(50);
+    let startRequestNum: number;
+
+    // tslint:disable-next-line:no-shadowed-variable
+    const gristApi = new GristDocAPI(DOC_ID,
+      {server: SERVER, apiKey: LIVE ? undefined : "unused", chunkSize: 12});
+
+    startRequestNum = requestNum;
+    const rowNums = await gristApi.addRecords(
+      'Table1', myRange.map((n) => ({Text_Field: "Chunk", Num: n})));
+    assert.deepEqual(rowNums, myRange.map((n) => 5 + n));
+    assert.equal(requestNum - startRequestNum, 5);
+
+    // Verify data is correct.
+    let data = await gristApi.fetchTable('Table1');
+    assertData(data, [
+      ...initialData.Table1,
+      ...myRange.map((n) => [5 + n, 'Chunk', n, null, 0, null])
+    ]);
+
+    // Update data using chunking.
+    startRequestNum = requestNum;
+    await gristApi.updateRecords('Table1',
+      myRange.map((n) => ({id: 5 + n, Text_Field: "Peanut Butter", ColorRef: 2})));
+    assert.equal(requestNum - startRequestNum, 5);
+
+    data = await gristApi.fetchTable('Table1');
+    assertData(data, [
+      ...initialData.Table1,
+      ...myRange.map((n) => [5 + n, 'Peanut Butter', n, null, 2, 'ORANGE'])
+    ]);
+
+    // Delete data using chunking.
+    startRequestNum = requestNum;
+    await gristApi.deleteRecords('Table1', myRange.map((n) => 5 + n));
+    assert.equal(requestNum - startRequestNum, 5);
+    data = await gristApi.fetchTable('Table1');
+    assertData(data, initialData.Table1);
+  });
+
+  it('should produce helpful errors', async function() {
+    await assert.isRejected(gristApi.fetchTable('Unicorn'), /Table not found.*Unicorn/);
+    await assert.isRejected(gristApi.fetchTable('Table1', {"ColorRef": [1], "ColorBoom": [2]}), /ColorBoom/);
+    await assert.isRejected(gristApi.addRecords('Table1', [{"Text_Field": "Beets", "NumX": 2}]),
+      /Invalid column.*NumX/);
   });
 });

@@ -40,36 +40,40 @@ export async function getAPIKey(): Promise<string> {
   throw new Error(`Grist API key not found in GRIST_API_KEY env, nor in ${keyPath}`);
 }
 
+export interface IGristCallConfig {
+  // The API key, available in Grist from Profile Settings. If omitted, will be taken from
+  // GRIST_API_KEY env var, or ~/.grist-api-key file.
+  apiKey?: string;
+
+  // Server URL. Defaults to 'https://api.getgrist.com'.
+  server?: string;
+
+  // If set, will not make any changes to the doc.
+  dryrun?: boolean;
+
+  // Split large requests into smaller one, each limited to chunkSize rows. Set to Infinity to
+  // disable this. The default value is 500. Grist may reject requests that are too large.
+  chunkSize?: number;
+}
+
 /**
  * Class for interacting with a Grist document.
  */
 export class GristDocAPI {
-  /**
-   * Create a GristDocAPI object with the API Key (available from user settings), DocId (the part
-   * of the URL after /doc/), and optionally a server URL. If dryrun is true, will not make any
-   * changes to the doc. The API key, if omitted, is taken from GRIST_API_KEY env var, or
-   * ~/.grist-api-key file.
-   */
-  public static async create(docId: string, options: {apiKey?: string, server?: string, dryrun?: boolean} = {}) {
-    return new GristDocAPI(docId, {
-      dryrun: Boolean(options.dryrun),
-      server: options.server || 'https://api.getgrist.com',
-      apiKey: options.apiKey || await getAPIKey(),
-    });
-  }
-
   private _dryrun: boolean;
   private _server: string;
-  private _apiKey: string;
+  private _apiKey: string|null;
+  private _chunkSize: number;
 
   /**
-   * The constructor is private. Use GristDocAPI.create(). (It is separate because involves an
-   * possible async call.)
+   * The constructor is private. Use GristDocAPI.create() instead. (It is separate because
+   * involves an possible async call.)
    */
-  private constructor(private _docId: string, options: {apiKey: string, server: string, dryrun: boolean}) {
-    this._dryrun = options.dryrun;
-    this._server = options.server;
-    this._apiKey = options.apiKey;
+  constructor(private _docId: string, options: IGristCallConfig = {}) {
+    this._dryrun = Boolean(options.dryrun);
+    this._server = options.server || 'https://api.getgrist.com';
+    this._apiKey = options.apiKey || null;
+    this._chunkSize = options.chunkSize || 500;
   }
 
   /**
@@ -90,13 +94,11 @@ export class GristDocAPI {
   /**
    * Adds new records to the given table. The data is a list of dictionaries, with keys
    * corresponding to the columns in the table. Returns a list of added rowIds.
-   *
-   * If chunkSize is given, we'll make multiple requests, each limited to chunkSize rows.
    */
-  public async addRecords(tableName: string, records: IRecord[], chunkSize: number = Infinity): Promise<number[]> {
+  public async addRecords(tableName: string, records: IRecord[]): Promise<number[]> {
     if (records.length === 0) { return []; }
 
-    const callData: ITableData[] = chunk(records, chunkSize).map((recs) => makeTableData(recs));
+    const callData: ITableData[] = chunk(records, this._chunkSize).map((recs) => makeTableData(recs));
 
     const results: number[] = [];
     for (const data of callData) {
@@ -110,10 +112,10 @@ export class GristDocAPI {
   /**
    * Deletes records from the given table. The data is a list of record IDs.
    */
-  public async deleteRecords(tableName: string, recordIds: number[], chunkSize: number = Infinity): Promise<void> {
+  public async deleteRecords(tableName: string, recordIds: number[]): Promise<void> {
     // There is an endpoint missing to delete records, but we can use the "apply" endpoint
     // meanwhile.
-    for (const recIds of chunk(recordIds, chunkSize)) {
+    for (const recIds of chunk(recordIds, this._chunkSize)) {
       debug("delete_records %s %s records", tableName, recIds.length);
       const data = [['BulkRemoveRecord', tableName, recIds]];
       await this._call('apply', data, 'POST');
@@ -128,10 +130,8 @@ export class GristDocAPI {
    * If records aren't all for the same set of columns, then a single-call update is impossible,
    * so we'll make multiple calls.
    * When groupIfNeeded is set, we'll make multiple calls. Otherwise, will raise an exception.
-   *
-   * If chunkSize is given, we'll make multiple requests, each limited to chunkSize rows.
    */
-  public async updateRecords(tableName: string, records: IRecord[], chunkSize: number = Infinity): Promise<void> {
+  public async updateRecords(tableName: string, records: IRecord[]): Promise<void> {
     const groups = new Map<string, IRecord[]>();
     for (const rec of records) {
       if (!rec.id || typeof rec.id !== 'number') {
@@ -144,7 +144,7 @@ export class GristDocAPI {
 
     const callData: ITableData[] = [];
     for (const groupRecords of groups.values()) {
-      callData.push(...chunk(groupRecords, chunkSize).map((recs) => makeTableData(recs)));
+      callData.push(...chunk(groupRecords, this._chunkSize).map((recs) => makeTableData(recs)));
     }
 
     for (const data of callData) {
@@ -161,15 +161,13 @@ export class GristDocAPI {
    *
    * keyColIds parameter lists primary-key columns, which must be present in the given records.
    *
-   * If chunkSize is given, individual requests will be limited to chunkSize rows each.
-   *
    * If filters is given, it should be a dictionary mapping colIds to values. Only records
    * matching these filters will be matched as candidates for existing rows to update. New records
    * whose columns don't match filters will be ignored.
    */
   public async syncTable(
     tableName: string, records: IRecord[], keyColIds: string[],
-    options: {chunkSize?: number, filters?: IFilterSpec} = {},
+    options: {filters?: IFilterSpec} = {},
   ): Promise<void> {
     const filters = options.filters;
 
@@ -209,23 +207,24 @@ export class GristDocAPI {
 
     debug("syncTable %s (%s) with %s records (%s filtered out): %s updates, %s new",
       tableName, gristRows.size, dataCount, filteredOut, updateList.length, addList.length);
-    await this.updateRecords(tableName, updateList, options.chunkSize);
-    await this.addRecords(tableName, addList, options.chunkSize);
+    await this.updateRecords(tableName, updateList);
+    await this.addRecords(tableName, addList);
   }
 
   /**
    * Low-level interface to make a REST call.
    */
-  private async _call(url: string, jsonData?: object, method?: Method, prefix?: string) {
-    if (prefix == null) {
-      prefix = `/api/docs/${this._docId}/`;
-    }
-    method = method || (jsonData ? 'POST' : 'GET');
+  private async _call(url: string, jsonData?: object, method?: Method) {
+    const fullUrl = `${this._server}/api/docs/${this._docId}/${url}`;
 
-    const fullUrl = this._server + prefix + url;
+    method = method || (jsonData ? 'POST' : 'GET');
     if (this._dryrun && method.toUpperCase() !== 'GET') {
       debug("DRYRUN NOT sending %s request to %s", method, fullUrl);
       return;
+    }
+    if (!this._apiKey) {
+      // If key is missing, get it on first use (possibly from a file), since the constructor can't be async.
+      this._apiKey = await getAPIKey();
     }
     debug("Sending %s request to %s", method, fullUrl);
     try {
@@ -234,7 +233,7 @@ export class GristDocAPI {
         method,
         data: jsonData,
         headers: {
-          'Authorization': `Bearer ${this._apiKey}`,
+          'Authorization': `Bearer ${await this._apiKey}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
