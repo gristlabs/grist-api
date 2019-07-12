@@ -204,26 +204,48 @@ describe("grist-api", function() {
   });
 
   it('should support syncTable with filters', async function() {
+    // syncTable should check that filters are a subset of key columns.
+    await assert.isRejected(
+      gristApi.syncTable('Table1', [
+        {Text_Field: 'Melon', Num: 100, Date: datets(2020, 6, 1)},
+        {Text_Field: 'Strawberry', Num: 200, Date: datets(2020, 6, 2)},
+      ], ['Text_Field'], {filters: {"ColorRef": [1]}}),
+      /key columns.*filter columns/);
+
+    // If columns don't match the filter, the records are ignored.
     await gristApi.syncTable('Table1', [
       {Text_Field: 'Melon', Num: 100, Date: datets(2020, 6, 1)},
       {Text_Field: 'Strawberry', Num: 200, Date: datets(2020, 6, 2)},
-    ], ['Text_Field'], {filters: {"ColorRef": [1]}});
+      {Text_Field: 'Melon', Num: 100, Date: datets(2020, 6, 1), ColorRef: 3},
+      {Text_Field: 'Strawberry', Num: 200, Date: datets(2020, 6, 2), ColorRef: 3},
+    ], ['Text_Field', 'ColorRef'], {filters: {"ColorRef": [1]}});
+
+    // Nothing changed because the first call was rejected, and in the second, the pass-in records
+    // didn't match the filter.
+    let data = await gristApi.fetchTable('Table1');
+    assertData(data, initialData.Table1);
+
+    // Try again with filter column included.
+    await gristApi.syncTable('Table1', [
+      {Text_Field: 'Melon', Num: 100, Date: datets(2020, 6, 1), ColorRef: 1},
+      {Text_Field: 'Strawberry', Num: 200, Date: datets(2020, 6, 2), ColorRef: 1},
+    ], ['Text_Field', 'ColorRef'], {filters: {"ColorRef": [1]}});
 
     // Note that Melon got added because it didn't exist in the filtered view.
-    let data = await gristApi.fetchTable('Table1');
+    data = await gristApi.fetchTable('Table1');
     assertData(data, [
       ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
       [1,     'Apple',      5,      datets(2019, 6, 26),  1,          "RED"],
       [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE"],
       [3,     'Melon',      12,     datets(2019, 4, 2),   3,          "GREEN"],
       [4,     'Strawberry', 200,    datets(2020, 6, 2),   1,          "RED"],
-      [5,     'Melon',      100,    datets(2020, 6, 1),   0,          null],
+      [5,     'Melon',      100,    datets(2020, 6, 1),   1,          "RED"],
     ]);
 
     // Revert data, and delete the newly-added record.
     await gristApi.syncTable('Table1', [
-      {Text_Field: 'Strawberry', Num: 1.5, Date: datets(2019, 3, 3)},
-    ], ['Text_Field'], {filters: {"ColorRef": [1]}});
+      {Text_Field: 'Strawberry', Num: 1.5, Date: datets(2019, 3, 3), ColorRef: 1},
+    ], ['Text_Field', 'ColorRef'], {filters: {"ColorRef": [1]}});
     await gristApi.deleteRecords('Table1', [5]);
 
     // Check we are back to where we started.

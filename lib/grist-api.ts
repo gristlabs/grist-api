@@ -171,15 +171,18 @@ export class GristDocAPI {
    *
    * keyColIds parameter lists primary-key columns, which must be present in the given records.
    *
-   * If filters is given, it should be a dictionary mapping colIds to values. Only records
-   * matching these filters will be matched as candidates for existing rows to update. New records
-   * whose columns don't match filters will be ignored.
+   * If filters is given, it should be a dictionary mapping colIds to values, where colIds must be
+   * included among keyColIds. Only existing records matching these filters will be matched as
+   * candidates for rows to update. New records which don't match filters will be ignored too.
    */
   public async syncTable(
     tableName: string, records: IRecord[], keyColIds: string[],
     options: {filters?: IFilterSpec} = {},
   ): Promise<void> {
     const filters = options.filters;
+    if (filters && !Object.keys(filters).every((colId) => keyColIds.includes(colId))) {
+      throw new Error("syncTable requires key columns to include all filter columns");
+    }
 
     // Maps unique keys to Grist rows
     const gristRows = new Map<string, IRecord>();
@@ -193,8 +196,8 @@ export class GristDocAPI {
     let dataCount = 0;
     let filteredOut = 0;
     for (const newRec of records) {
-      // If we have any filters on keyColIds, ignore new records which don't match those filters.
-      if (filters && keyColIds.some((colId) => filters[colId] && !filters[colId].includes(newRec[colId]))) {
+      // If we have any filters, ignore new records which don't match them.
+      if (filters && !filterMatches(newRec, filters)) {
         filteredOut += 1;
         continue;
       }
@@ -289,4 +292,12 @@ function makeTableData(records: IRecord[]): ITableData {
     }
   }
   return mapValues(allKeys, (_, key) => records.map((rec) => rec[key]));
+}
+
+/**
+ * Checks if a record matches a set of filters.
+ */
+function filterMatches(rec: IRecord, filters: IFilterSpec): boolean {
+  // TODO: This considers non-primitive values (e.g. ['d', 1234567] as always non-matching.
+  return Object.keys(filters).every((colId) => filters[colId].includes(rec[colId]));
 }
