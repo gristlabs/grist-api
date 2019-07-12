@@ -1,0 +1,17 @@
+GET /o/docs-8/api/docs/28a446f2-903e-4bd4-8001-1dbd3a68e5a5/tables/Table1/data?filter=%7B%22ColorRef%22%3A%5B1%5D%2C%22ColorBoom%22%3A%5B2%5D%7D
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should produce helpful errors/1
+
+HTTP/1.1 400 Bad Request
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type
+content-type: application/json; charset=utf-8
+content-length: 55
+etag: W/"37-o2R7QYeeDJbOZYFxmjjxOTF3HSU"
+date: Thu, 11 Jul 2019 06:40:04 GMT
+connection: close
+
+{"error":"Error doing API call: [Sandbox] 'ColorBoom'"}

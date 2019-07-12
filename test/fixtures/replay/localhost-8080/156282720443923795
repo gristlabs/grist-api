@@ -1,0 +1,18 @@
+PATCH /o/docs-8/api/docs/28a446f2-903e-4bd4-8001-1dbd3a68e5a5/tables/Table1/data
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support chunking/8
+body: {\"id\":[29,30,31,32,33,34,35,36,37,38,39,40],\"Text_Field\":[\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\",\"Peanut Butter\"],\"ColorRef\":[2,2,2,2,2,2,2,2,2,2,2,2]}
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type
+content-type: application/json; charset=utf-8
+content-length: 4
+etag: W/"4-K+iMpCQsduglOsYkdIUQZQMtaDM"
+date: Thu, 11 Jul 2019 06:40:04 GMT
+connection: close
+
+null
