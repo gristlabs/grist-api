@@ -1,7 +1,7 @@
 POST /o/docs-8/api/docs/28a446f2-903e-4bd4-8001-1dbd3a68e5a5/apply
 accept: application/json
 content-type: application/json
-x-request-num: grist-api should support syncTable with filters/8
+x-request-num: grist-api should support syncTable with filters/10
 body: [[\"BulkRemoveRecord\",\"Table1\",[5]]]
 
 HTTP/1.1 200 OK
@@ -11,8 +11,8 @@ access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
 access-control-allow-headers: Authorization, Content-Type
 content-type: application/json; charset=utf-8
 content-length: 36
-etag: W/"24-p3FS4CBl0MbUUE/V10dNSan/2zQ"
-date: Fri, 12 Jul 2019 15:45:29 GMT
+etag: W/"24-rJw7V2vF/gRzi9VR6rw47c5C4DI"
+date: Fri, 12 Jul 2019 16:21:17 GMT
 connection: close
 
-{"actionNum":884,"retValues":[null]}
+{"actionNum":950,"retValues":[null]}
