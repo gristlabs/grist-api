@@ -87,6 +87,16 @@ describe("grist-api", function() {
     axios.interceptors.request.eject(interceptor);
   });
 
+  it("should parse various doc URLs", async function() {
+    function getDocId(docUrlOrId: string) {
+      return new GristDocAPI(docUrlOrId, {apiKey: "unused"}).docId;
+    }
+    assert.equal(getDocId('http://localhost:8080/o/docs/wW5ATuoLAKwH/Receivable/p/1'), 'wW5ATuoLAKwH');
+    assert.equal(getDocId('https://public.getgrist.com/doc/foobar/p/19'), 'foobar');
+    assert.equal(getDocId('https://gristlabs.getgrist.com/8p81LjiWSEDT/ACME-Tacos-Projects'), '8p81LjiWSEDT');
+    assert.equal(getDocId('https://gristlabs.getgrist.com/doc/8p81LjiWSEDT1K1oV9NEX9'), '8p81LjiWSEDT1K1oV9NEX9');
+  });
+
   it("should support fetchTable", async function() {
     // Test the basic fetchTable
     let data: IRecord[] = await gristApi.fetchTable('Table1');

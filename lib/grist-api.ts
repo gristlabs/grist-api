@@ -80,14 +80,19 @@ export class GristDocAPI {
     this._server = options.server || 'https://api.getgrist.com';
     this._apiKey = options.apiKey || null;
     this._chunkSize = options.chunkSize || 500;
-    const match = /^(https?:.*)\/doc\/([^\/?#]+)/.exec(docUrlOrId);
+    const match = /^(https?:\/\/[^\/]+(?:\/o\/[^\/]+)?)\/(?:doc\/([^\/?#]+)|([^\/?#]{12,}))/.exec(docUrlOrId);
     if (match) {
       this._server = match[1];
-      this._docId = match[2];
+      this._docId = match[2] || match[3];
     } else {
       this._docId = docUrlOrId;
     }
   }
+
+  /**
+   * Returns the docId identifying the document in API calls.
+   */
+  public get docId(): string { return this._docId; }
 
   /**
    * Fetch all data in the table by the given name, returning a list of records with attributes
