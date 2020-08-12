@@ -3,12 +3,9 @@
  */
 import axios, { Method } from 'axios';
 import * as _debug from 'debug';
-import * as fse from 'fs-extra';
 import chunk = require('lodash/chunk');
 import mapValues = require('lodash/mapValues');
 import pick = require('lodash/pick');
-import * as os from 'os';
-import * as path from 'path';
 
 const debug = _debug('grist-api');
 const debugReq = _debug('grist-api:requests');
@@ -28,9 +25,17 @@ export interface ITableData { [colId: string]: CellValue[]; }
 export interface IFilterSpec { [colId: string]: CellValue[]; }
 
 export async function getAPIKey(): Promise<string> {
+  if (typeof process === 'undefined') {
+    throw new Error('In browser environment, Grist API key must be provided');
+  }
+
+  // Otherwise, assume we are in node environment.
   if (process.env.GRIST_API_KEY) {
     return process.env.GRIST_API_KEY;
   }
+  const os = require('os');
+  const path = require('path');
+  const fse = require('fs-extra');
   const keyPath = path.join(os.homedir(), ".grist-api-key");
   if (fse.pathExists(keyPath)) {
     return (await fse.readFile(keyPath, {encoding: 'utf8'})).trim();
@@ -75,7 +80,7 @@ export class GristDocAPI {
     this._server = options.server || 'https://api.getgrist.com';
     this._apiKey = options.apiKey || null;
     this._chunkSize = options.chunkSize || 500;
-    const match = /^(https?:.*)\/doc\/([^\/#]+)/.exec(docUrlOrId);
+    const match = /^(https?:.*)\/doc\/([^\/?#]+)/.exec(docUrlOrId);
     if (match) {
       this._server = match[1];
       this._docId = match[2];
@@ -93,7 +98,10 @@ export class GristDocAPI {
    */
   public async fetchTable(tableName: string, filters?: IFilterSpec): Promise<IRecord[]> {
     const query = filters ? `?filter=${encodeURIComponent(JSON.stringify(filters))}` : '';
-    const data: ITableData = await this._call(`tables/${tableName}/data${query}`);
+    const data: ITableData = await this._docCall(`tables/${tableName}/data${query}`);
+    if (!Array.isArray(data.id)) {
+      throw new Error(`fetchTable ${tableName} returned bad response: id column is not an array`);
+    }
     // Convert column-oriented data to list of records.
     debug("fetchTable %s returned %s rows", tableName, data.id.length);
     return data.id.map((id, index) => mapValues(data, (col) => col[index]));
@@ -111,7 +119,7 @@ export class GristDocAPI {
     const results: number[] = [];
     for (const data of callData) {
       debug("addRecords %s %s", tableName, descColValues(data));
-      const resp = await this._call(`tables/${tableName}/data`, data, 'POST');
+      const resp = await this._docCall(`tables/${tableName}/data`, data, 'POST');
       results.push(...(resp || []));
     }
     return results;
@@ -126,7 +134,7 @@ export class GristDocAPI {
     for (const recIds of chunk(recordIds, this._chunkSize)) {
       debug("delete_records %s %s records", tableName, recIds.length);
       const data = [['BulkRemoveRecord', tableName, recIds]];
-      await this._call('apply', data, 'POST');
+      await this._docCall('apply', data, 'POST');
     }
   }
 
@@ -159,7 +167,7 @@ export class GristDocAPI {
       // If a call fails, other calls won't run. TODO we should think of how to do better, perhaps
       // with undo of actions that did succeed (but that has dangers if other code ran in the
       // meantime), or better figuring out a path to transactions.
-      await this._call(`tables/${tableName}/data`, data, 'PATCH');
+      await this._docCall(`tables/${tableName}/data`, data, 'PATCH');
     }
   }
 
@@ -229,13 +237,25 @@ export class GristDocAPI {
     await this.addRecords(tableName, addList);
   }
 
+  public async attach(files: File[]): Promise<number[]> {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('upload', file);
+    }
+    return await this._docCall('attach', formData, 'POST');
+  }
+
   /**
    * Low-level interface to make a REST call.
    */
-  private async _call(url: string, jsonData?: object, method?: Method) {
-    const fullUrl = `${this._server}/api/docs/${this._docId}/${url}`;
+  private async _docCall(docRelUrl: string, data?: object|FormData, method?: Method) {
+    return this._call(`/api/docs/${this._docId}/${docRelUrl}`, data, method);
+  }
 
-    method = method || (jsonData ? 'POST' : 'GET');
+  private async _call(url: string, data?: object|FormData, method?: Method) {
+    const fullUrl = `${this._server}${url}`;
+
+    method = method || (data ? 'POST' : 'GET');
     if (this._dryrun && method.toUpperCase() !== 'GET') {
       debug("DRYRUN NOT sending %s request to %s", method, fullUrl);
       return;
@@ -249,10 +269,10 @@ export class GristDocAPI {
       const request = {
         url: fullUrl,
         method,
-        data: jsonData,
+        data,
         headers: {
           'Authorization': `Bearer ${this._apiKey}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json',     // Ignored when using FormData
           'Accept': 'application/json',
         },
       };
