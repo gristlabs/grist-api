@@ -7,6 +7,10 @@ import chunk = require('lodash/chunk');
 import mapValues = require('lodash/mapValues');
 import pick = require('lodash/pick');
 
+// Require type only, since the actual require may not be needed or available,
+// depending on how and where grist-api is used.
+import type * as FsExtra from 'fs-extra';
+
 const debug = _debug('grist-api');
 const debugReq = _debug('grist-api:requests');
 
@@ -30,17 +34,17 @@ export async function getAPIKey(): Promise<string> {
   }
 
   // Otherwise, assume we are in node environment.
-  if (process.env.GRIST_API_KEY) {
+  if (process.env.GRIST_API_KEY !== undefined) {
     return process.env.GRIST_API_KEY;
   }
   const os = require('os');
   const path = require('path');
-  const fse = require('fs-extra');
+  const fse: typeof FsExtra = require('fs-extra');
   const keyPath = path.join(os.homedir(), ".grist-api-key");
-  if (fse.pathExists(keyPath)) {
+  if (await fse.pathExists(keyPath)) {
     return (await fse.readFile(keyPath, {encoding: 'utf8'})).trim();
   }
-  throw new Error(`Grist API key not found in GRIST_API_KEY env, nor in ${keyPath}`);
+  throw new Error(`Grist API key not given, or found in GRIST_API_KEY env, or in ${keyPath}`);
 }
 
 export interface IGristCallConfig {
@@ -78,7 +82,7 @@ export class GristDocAPI {
   constructor(docUrlOrId: string, options: IGristCallConfig = {}) {
     this._dryrun = Boolean(options.dryrun);
     this._server = options.server || 'https://api.getgrist.com';
-    this._apiKey = options.apiKey || null;
+    this._apiKey = options.apiKey ?? null;
     this._chunkSize = options.chunkSize || 500;
     const match = /^(https?:\/\/[^\/]+(?:\/o\/[^\/]+)?)\/(?:doc\/([^\/?#]+)|([^\/?#]{12,}))/.exec(docUrlOrId);
     if (match) {
@@ -265,18 +269,25 @@ export class GristDocAPI {
       debug("DRYRUN NOT sending %s request to %s", method, fullUrl);
       return;
     }
-    if (!this._apiKey) {
+    let apiKeyMessage: string|undefined;
+    if (this._apiKey === null) {
       // If key is missing, get it on first use (possibly from a file), since the constructor can't be async.
-      this._apiKey = await getAPIKey();
+      try {
+        this._apiKey = await getAPIKey();
+      } catch (err) {
+        this._apiKey = '';    // Don't try to fetch it any more
+        apiKeyMessage = err.message;
+      }
     }
     debug("Sending %s request to %s", method, fullUrl);
     try {
+      const authHeader = this._apiKey ? {Authorization: `Bearer ${this._apiKey}`} : {};
       const request = {
         url: fullUrl,
         method,
         data,
         headers: {
-          'Authorization': `Bearer ${this._apiKey}`,
+          ...authHeader,
           'Content-Type': 'application/json',     // Ignored when using FormData
           'Accept': 'application/json',
         },
@@ -285,10 +296,15 @@ export class GristDocAPI {
       const response = await axios.request(request);
       return response.data;
     } catch (err) {
-      // If the error has {"error": ...} content, use that for the error message.
+      // If the error has a string or {"error": ...} content, use that for the error message.
       const errorObj = err.response ? err.response.data : null;
-      if (typeof errorObj === 'object' && errorObj && errorObj.error) {
-        err.message = "Grist: " + errorObj.error;
+      if (typeof errorObj === 'string') {
+        err.message += ' / ' + errorObj;
+      } else if (typeof errorObj === 'object' && errorObj && errorObj.error) {
+        err.message += " / Grist: " + errorObj.error;
+      }
+      if (err.response?.status === 403 && apiKeyMessage) {
+        err.message += ' / ' + apiKeyMessage;
       }
       throw err;
     }
