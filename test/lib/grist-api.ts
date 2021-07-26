@@ -323,8 +323,16 @@ describe("grist-api", function() {
     let api = new GristDocAPI(DOC_URL);
     // Key wasn't explicitly given, but apparently was needed, so check that some info about that
     // gets mentioned.
-    await assert.isRejected(api.fetchTable('Table1'),
-      /No view access.*API key not given.*GRIST_API_KEY env.*\.grist-api-key/);
+    // Don't use the real HOME, so that the test doesn't depend on whether there is a
+    // ~/.grist-api-key file for the user running the test. We are testing its nonexistence.
+    const origHome = process.env.HOME;
+    process.env.HOME = '/tmp/grist-api-nonexistent';
+    try {
+      await assert.isRejected(api.fetchTable('Table1'),
+        /No view access.*API key not given.*GRIST_API_KEY env.*\.grist-api-key/);
+    } finally {
+      process.env.HOME = origHome;
+    }
 
     api = new GristDocAPI(DOC_URL, {apiKey: ''});
     // Key was explicitly given as empty, so nothing to add about it.
