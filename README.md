@@ -21,7 +21,7 @@ npm install grist-api
 const {GristDocAPI} = require('grist-api');
 
 // Put here the URL of your document.
-const DOC_URL = "https://subdomain.getgrist.com/doc/12345678-2761-4ef2-bc28-310e634754fb";
+const DOC_URL = "https://docs.getgrist.com/123456789abc/My-Document";
 
 async function main() {
   const api = new GristDocAPI(DOC_URL);
@@ -48,9 +48,15 @@ To run this, first prepare a Grist doc to play with:
   3. Set `DOC_URL` in the code above to that of your document (the part after doc ID doesn't
      matter).
 
-To use the API, you need to get your API key in Grist from Profile Settings. Run the code above
-with `GRIST_API_KEY=<key>` in the shell environment. The key may also be stored to
-`~/.grist-api-key` file.
+To use the API, you need to get your API key in Grist from Profile Settings. This API key may be
+provided to `GristDocAPI` in several ways, and is looked for in this order:
+
+- As a constructor argument: `new GristDocAPI(DOC_URL, {apiKey: 'XXX'})`.
+- In an environment variable: `GRIST_API_KEY=<key>`.
+- In the `~/.grist-api-key` file.
+
+Public documents may be accessed without an API key, or with an empty string for the API key (to
+stop searching the locations above).
 
 ## Classes and methods
 

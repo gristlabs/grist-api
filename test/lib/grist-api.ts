@@ -318,4 +318,55 @@ describe("grist-api", function() {
     await assert.isRejected(gristApi.addRecords('Table1', [{"Text_Field": "Beets", "NumX": 2}]),
       /Invalid column.*NumX/);
   });
+
+  it('should show helpful errors when API key is not set', async function() {
+    let api = new GristDocAPI(DOC_URL);
+    // Key wasn't explicitly given, but apparently was needed, so check that some info about that
+    // gets mentioned.
+    // Don't use the real HOME, so that the test doesn't depend on whether there is a
+    // ~/.grist-api-key file for the user running the test. We are testing its nonexistence.
+    const origHome = process.env.HOME;
+    process.env.HOME = '/tmp/grist-api-nonexistent';
+    try {
+      await assert.isRejected(api.fetchTable('Table1'),
+        /No view access.*API key not given.*GRIST_API_KEY env.*\.grist-api-key/);
+    } finally {
+      process.env.HOME = origHome;
+    }
+
+    api = new GristDocAPI(DOC_URL, {apiKey: ''});
+    // Key was explicitly given as empty, so nothing to add about it.
+    await assert.isRejected(api.fetchTable('Table1'),
+      /No view access$/);
+
+    const origEnvVar = process.env.GRIST_API_KEY;
+    try {
+      process.env.GRIST_API_KEY = '';
+      // Key was explicitly given as empty via env var, so nothing to add about it.
+      api = new GristDocAPI(DOC_URL);
+      await assert.isRejected(api.fetchTable('Table1'),
+        /No view access$/);
+    } finally {
+      process.env.GRIST_API_KEY = origEnvVar;
+    }
+
+    api = new GristDocAPI(DOC_URL, {apiKey: 'invalid'});
+    // Key was explicitly given, so nothing to add about it.
+    await assert.isRejected(api.fetchTable('Table1'),
+      /invalid API key/);
+  });
+
+  it('should allow access to public docs without API key', async function() {
+    const publicDocUrl = 'https://templates.getgrist.com/doc/lightweight-crm';
+    let api = new GristDocAPI(publicDocUrl);
+    assert.isAbove((await api.fetchTable('Contacts')).length, 5);
+
+    // We can also explicitly specify an empty api key.
+    api = new GristDocAPI(publicDocUrl, {apiKey: ''});
+    assert.isAbove((await api.fetchTable('Contacts')).length, 5);
+
+    // But explicitly specifying an invalid key will fail, as it should.
+    api = new GristDocAPI(publicDocUrl, {apiKey: 'invalid'});
+    await assert.isRejected(api.fetchTable('Contacts'), /invalid API key/);
+  });
 });
