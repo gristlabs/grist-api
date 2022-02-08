@@ -1,0 +1,17 @@
+GET /o/docs/api/docs/q5Cb8uYYJZjA/tables/Table1/data?filter=%7B%22Num%22%3A%5B2%5D%7D
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support addRecords and deleteRecords/3
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type, X-Requested-With
+cache-control: no-cache
+content-type: application/json; charset=utf-8
+date: Tue, 08 Feb 2022 16:19:38 GMT
+connection: close
+transfer-encoding: chunked
+
+{"id":[],"manualSort":[],"ColorRef":[],"gristHelper_Display2":[],"Num":[],"Text_Field":[],"Date":[],"ChoiceList":[],"ColorRef_Value":[]}

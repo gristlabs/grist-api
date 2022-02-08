@@ -1,0 +1,14 @@
+GET /o/docs/api/docs/q5Cb8uYYJZjA/tables/Table1/data
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should show helpful errors when API key is not set/3
+
+HTTP/1.1 401 Unauthorized
+x-powered-by: Express
+content-type: text/html; charset=utf-8
+content-length: 28
+etag: W/"1c-Vs7Ff6aC29S+nYIoP+2sm44KOAg"
+date: Tue, 08 Feb 2022 16:19:39 GMT
+connection: close
+
+Bad request: invalid API key

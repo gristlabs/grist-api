@@ -1,0 +1,18 @@
+PATCH /o/docs/api/docs/q5Cb8uYYJZjA/tables/Table1/data
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support varied updateRecords/1
+body: {\"id\":[4],\"Num\":[-1.5],\"ColorRef\":[2],\"ChoiceList\":[[\"L\",\"Bar\"]]}
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type, X-Requested-With
+cache-control: no-cache
+content-type: application/json; charset=utf-8
+date: Tue, 08 Feb 2022 16:19:38 GMT
+connection: close
+transfer-encoding: chunked
+
+null
