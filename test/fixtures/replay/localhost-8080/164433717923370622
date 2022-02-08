@@ -1,4 +1,4 @@
-GET /o/docs/api/docs/q5Cb8uYYJZjA/tables/Table1/data
+GET REGEXP /\/o\/[^\/]*\/api\/docs\/[^\/]*\/tables\/Table1\/data/
 accept: application/json
 content-type: application/json
 x-request-num: grist-api should support syncTable with filters/1
