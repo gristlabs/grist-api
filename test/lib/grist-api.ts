@@ -10,9 +10,9 @@
  * replaying, we are not checking Grist functionality, only that correct requests get produced, and
  * that responses get parsed.
  *
- * To record interactions with REPLAY=record, you need to use a functional instance of Grist. Upload
- * document test/fixtures/TestGristDocAPI.grist to Grist, and set SERVER and DOC_ID constants below
- * to point to it. Find your API key, and set GRIST_API_KEY env var to it.
+ * To record interactions with REPLAY=record, you need to use a functional instance of Grist on
+ * localhost:8080. Upload document test/fixtures/TestGristDocAPI.grist to Grist, and set
+ * GRIST_DOC_URL env var to it. Find your API key, and set GRIST_API_KEY env var to it.
  */
 // tslint:disable:object-literal-key-quotes
 
@@ -37,7 +37,8 @@ Replay.reset('localhost');
 // Do not record the Authorization header.
 Replay.headers  = (Replay.headers as RegExp[]).filter((r) => !/auth/i.test(r.source));
 
-const DOC_URL = "http://localhost:8080/o/docs-8/doc/28a446f2-903e-4bd4-8001-1dbd3a68e5a5";
+// Server and docId with which fixtures were recorded.
+const DOC_URL = process.env.GRIST_DOC_URL || "http://localhost:8080/o/docs-8/doc/28a446f2-903e-4bd4-8001-1dbd3a68e5a5";
 const LIVE = Boolean(process.env.REPLAY && process.env.REPLAY !== 'replay');
 
 const initialData = {
@@ -326,12 +327,15 @@ describe("grist-api", function() {
     // Don't use the real HOME, so that the test doesn't depend on whether there is a
     // ~/.grist-api-key file for the user running the test. We are testing its nonexistence.
     const origHome = process.env.HOME;
+    const origEnvVar = process.env.GRIST_API_KEY;
     process.env.HOME = '/tmp/grist-api-nonexistent';
+    delete process.env.GRIST_API_KEY;
     try {
       await assert.isRejected(api.fetchTable('Table1'),
         /No view access.*API key not given.*GRIST_API_KEY env.*\.grist-api-key/);
     } finally {
       process.env.HOME = origHome;
+      process.env.GRIST_API_KEY = origEnvVar;
     }
 
     api = new GristDocAPI(DOC_URL, {apiKey: ''});
@@ -339,7 +343,6 @@ describe("grist-api", function() {
     await assert.isRejected(api.fetchTable('Table1'),
       /No view access$/);
 
-    const origEnvVar = process.env.GRIST_API_KEY;
     try {
       process.env.GRIST_API_KEY = '';
       // Key was explicitly given as empty via env var, so nothing to add about it.

@@ -15,7 +15,7 @@ const debug = _debug('grist-api');
 const debugReq = _debug('grist-api:requests');
 
 // Type for values in Grist data cells.
-export type CellValue = number|string|boolean|null|[string, any];
+export type CellValue = number|string|boolean|null|[string, ...any[]];
 
 // Record representing a row in a Grist table.
 export interface IRecord { [colId: string]: CellValue; }

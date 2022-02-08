@@ -1,4 +1,4 @@
-GET /o/docs-8/api/docs/28a446f2-903e-4bd4-8001-1dbd3a68e5a5/tables/Table1/data?filter=%7B%22ColorRef%22%3A%5B1%5D%7D
+GET REGEXP /\/o\/[^\/]*\/api\/docs\/[^\/]*\/tables\/Table1\/data\?filter=%7B%22ColorRef%22%3A%5B1%5D%7D/
 accept: application/json
 content-type: application/json
 x-request-num: grist-api should support syncTable with filters/6
