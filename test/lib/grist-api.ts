@@ -320,29 +320,39 @@ describe("grist-api", function() {
       /Invalid column.*NumX/);
   });
 
-  it('should show helpful errors when API key is not set', async function() {
+  function withUnsetApiKey(testCase: () => Promise<void>) {
+    // Ignore GRIST_API_KEY in the actual environment, and don't use the real HOME, so that the
+    // test doesn't depend on whether there is a ~/.grist-api-key file for the user running the
+    // test. These tests assume a blank slate for API key settings.
+    const origHome = process.env.HOME;
+    const origEnvVar = process.env.GRIST_API_KEY;
+    return async () => {
+      process.env.HOME = '/tmp/grist-api-nonexistent';
+      delete process.env.GRIST_API_KEY;
+      try {
+        return await testCase();
+      } finally {
+        process.env.HOME = origHome;
+        if (origEnvVar !== undefined) {
+          process.env.GRIST_API_KEY = origEnvVar;
+        }
+      }
+    };
+  }
+
+  it('should show helpful errors when API key is not set', withUnsetApiKey(async function() {
     let api = new GristDocAPI(DOC_URL);
     // Key wasn't explicitly given, but apparently was needed, so check that some info about that
     // gets mentioned.
-    // Don't use the real HOME, so that the test doesn't depend on whether there is a
-    // ~/.grist-api-key file for the user running the test. We are testing its nonexistence.
-    const origHome = process.env.HOME;
-    const origEnvVar = process.env.GRIST_API_KEY;
-    process.env.HOME = '/tmp/grist-api-nonexistent';
-    delete process.env.GRIST_API_KEY;
-    try {
-      await assert.isRejected(api.fetchTable('Table1'),
-        /No view access.*API key not given.*GRIST_API_KEY env.*\.grist-api-key/);
-    } finally {
-      process.env.HOME = origHome;
-      process.env.GRIST_API_KEY = origEnvVar;
-    }
+    await assert.isRejected(api.fetchTable('Table1'),
+      /No view access.*API key not given.*GRIST_API_KEY env.*\.grist-api-key/);
 
     api = new GristDocAPI(DOC_URL, {apiKey: ''});
     // Key was explicitly given as empty, so nothing to add about it.
     await assert.isRejected(api.fetchTable('Table1'),
       /No view access$/);
 
+    const origEnvVar = process.env.GRIST_API_KEY;
     try {
       process.env.GRIST_API_KEY = '';
       // Key was explicitly given as empty via env var, so nothing to add about it.
@@ -357,9 +367,9 @@ describe("grist-api", function() {
     // Key was explicitly given, so nothing to add about it.
     await assert.isRejected(api.fetchTable('Table1'),
       /invalid API key/);
-  });
+  }));
 
-  it('should allow access to public docs without API key', async function() {
+  it('should allow access to public docs without API key', withUnsetApiKey(async function() {
     const publicDocUrl = 'https://templates.getgrist.com/doc/lightweight-crm';
     let api = new GristDocAPI(publicDocUrl);
     assert.isAbove((await api.fetchTable('Contacts')).length, 5);
@@ -371,5 +381,5 @@ describe("grist-api", function() {
     // But explicitly specifying an invalid key will fail, as it should.
     api = new GristDocAPI(publicDocUrl, {apiKey: 'invalid'});
     await assert.isRejected(api.fetchTable('Contacts'), /invalid API key/);
-  });
+  }));
 });
