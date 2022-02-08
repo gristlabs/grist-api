@@ -1,0 +1,17 @@
+GET /o/docs/api/docs/q5Cb8uYYJZjA/tables/Table1/data?filter=%7B%22ColorRef%22%3A%5B1%5D%7D
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support syncTable with filters/2
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type, X-Requested-With
+cache-control: no-cache
+content-type: application/json; charset=utf-8
+date: Tue, 08 Feb 2022 15:59:29 GMT
+connection: close
+transfer-encoding: chunked
+
+{"id":[1,4],"manualSort":[1,4],"ColorRef":[1,1],"gristHelper_Display2":["Red","Red"],"Num":[5,1.5],"Text_Field":["Apple","Strawberry"],"Date":[1561507200,1551571200],"ChoiceList":[["L","Foo","Bar"],["L","Baz 2","Foo"]],"ColorRef_Value":["RED","RED"]}

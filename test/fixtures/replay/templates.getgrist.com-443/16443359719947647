@@ -1,0 +1,14 @@
+GET /api/docs/lightweight-crm/tables/Contacts/data
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should allow access to public docs without API key/2
+
+HTTP/1.1 401 Unauthorized
+date: Tue, 08 Feb 2022 15:59:32 GMT
+content-type: text/html; charset=utf-8
+content-length: 28
+connection: close
+x-powered-by: Express
+etag: W/"1c-Vs7Ff6aC29S+nYIoP+2sm44KOAg"
+
+Bad request: invalid API key

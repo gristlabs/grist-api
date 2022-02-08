@@ -41,13 +41,13 @@ Replay.headers  = (Replay.headers as RegExp[]).filter((r) => !/auth/i.test(r.sou
 const DOC_URL = process.env.GRIST_DOC_URL || "http://localhost:8080/o/docs-8/doc/28a446f2-903e-4bd4-8001-1dbd3a68e5a5";
 const LIVE = Boolean(process.env.REPLAY && process.env.REPLAY !== 'replay');
 
-const initialData = {
+const initialData: {[tableId: string]: CellValue[][]} = {
   Table1: [
-    ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
-    [1,     'Apple',      5,      datets(2019, 6, 26),  1,          "RED"],
-    [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE"],
-    [3,     'Melon',      12,     datets(2019, 4, 2),   3,          "GREEN"],
-    [4,     'Strawberry', 1.5,    datets(2019, 3, 3),   1,          "RED"],
+    ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value', 'ChoiceList'],
+    [1,     'Apple',      5,      datets(2019, 6, 26),  1,          "RED",            ['L', 'Foo', 'Bar']],
+    [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE",         ['L', 'Baz 2']],
+    [3,     'Melon',      12,     datets(2019, 4, 2),   3,          "GREEN",          null],
+    [4,     'Strawberry', 1.5,    datets(2019, 3, 3),   1,          "RED",            ['L', 'Baz 2', 'Foo']],
   ],
 };
 
@@ -106,9 +106,9 @@ describe("grist-api", function() {
     // Test fetchTable with filters
     data = await gristApi.fetchTable('Table1', {ColorRef: [1]});
     assertData(data, [
-      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
-      [1,     'Apple',      5,      datets(2019, 6, 26),  1,          "RED"],
-      [4,     'Strawberry', 1.5,    datets(2019, 3, 3),   1,          "RED"],
+      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value', 'ChoiceList'],
+      [1,     'Apple',      5,      datets(2019, 6, 26),  1,          "RED",            ['L', 'Foo', 'Bar']],
+      [4,     'Strawberry', 1.5,    datets(2019, 3, 3),   1,          "RED",            ['L', 'Baz 2', 'Foo']],
     ]);
   });
 
@@ -163,22 +163,22 @@ describe("grist-api", function() {
     // Mismatched column sets work too.
     await gristApi.updateRecords('Table1', [
       {"id": 1, "Num": -5, "Text_Field": "snapple"},
-      {"id": 4, "Num": -1.5, "ColorRef": 2},
+      {"id": 4, "Num": -1.5, "ColorRef": 2, "ChoiceList": ['L', 'Bar']},
     ]);
 
     let data = await gristApi.fetchTable('Table1');
     assertData(data, [
-      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
-      [1,     'snapple',    -5,     datets(2019, 6, 26),  1,          "RED"],
-      [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE"],
-      [3,     'Melon',      12,     datets(2019, 4, 2),   3,          "GREEN"],
-      [4,     'Strawberry', -1.5,   datets(2019, 3, 3),   2,          "ORANGE"],
+      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value', 'ChoiceList'],
+      [1,     'snapple',    -5,     datets(2019, 6, 26),  1,          "RED",            ['L', 'Foo', 'Bar']],
+      [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE",         ['L', 'Baz 2']],
+      [3,     'Melon',      12,     datets(2019, 4, 2),   3,          "GREEN",          null],
+      [4,     'Strawberry', -1.5,   datets(2019, 3, 3),   2,          "ORANGE",         ['L', 'Bar']],
     ]);
 
     // Revert the changes.
     await gristApi.updateRecords('Table1', [
       {"id": 1, "Num": 5, "Text_Field": "Apple"},
-      {"id": 4, "Num": 1.5, "ColorRef": 1},
+      {"id": 4, "Num": 1.5, "ColorRef": 1, "ChoiceList": ['L', 'Baz 2', 'Foo']},
     ]);
 
     data = await gristApi.fetchTable('Table1');
@@ -194,18 +194,34 @@ describe("grist-api", function() {
 
     let data = await gristApi.fetchTable('Table1');
     assertData(data, [
-      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value'],
-      [1,     'Apple',      17,     datets(2020, 5, 1),   1,          "RED"],
-      [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE"],
-      [3,     'Melon',      28,     null,                 3,          "GREEN"],
-      [4,     'Strawberry', 1.5,    datets(2019, 3, 3),   1,          "RED"],
-      [5,     'Banana',     33,     datets(2020, 5, 2),   0,          null],
+      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value', 'ChoiceList'],
+      [1,     'Apple',      17,     datets(2020, 5, 1),   1,          "RED",            ['L', 'Foo', 'Bar']],
+      [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE",         ['L', 'Baz 2']],
+      [3,     'Melon',      28,     null,                 3,          "GREEN",          null],
+      [4,     'Strawberry', 1.5,    datets(2019, 3, 3),   1,          "RED",            ['L', 'Baz 2', 'Foo']],
+      [5,     'Banana',     33,     datets(2020, 5, 2),   0,          null,             null],
+    ]);
+
+    await gristApi.syncTable('Table1', [
+      {Text_Field: 'Apple',       ChoiceList: ['L', 'Foo', 'Bar']},
+      {Text_Field: 'Strawberry',  ChoiceList: ['L', 'Baz 2']},
+    ], ['Text_Field']);
+
+    data = await gristApi.fetchTable('Table1');
+    assertData(data, [
+      ['id',  'Text_Field', 'Num',  'Date',               'ColorRef', 'ColorRef_Value', 'ChoiceList'],
+      [1,     'Apple',      17,     datets(2020, 5, 1),   1,          "RED",            ['L', 'Foo', 'Bar']],
+      [2,     'Orange',     8,      datets(2019, 5, 1),   2,          "ORANGE",         ['L', 'Baz 2']],
+      [3,     'Melon',      28,     null,                 3,          "GREEN",          null],
+      [4,     'Strawberry', 1.5,    datets(2019, 3, 3),   1,          "RED",            ['L', 'Baz 2']],
+      [5,     'Banana',     33,     datets(2020, 5, 2),   0,          null,             null],
     ]);
 
     // Revert data, and delete the newly-added record.
     await gristApi.syncTable('Table1', [
       {Text_Field: 'Apple', Num: 5, Date: datets(2019, 6, 26)},
       {Text_Field: 'Melon', Num: 12, Date: datets(2019, 4, 2)},
+      {Text_Field: 'Strawberry', ChoiceList: ['L', 'Baz 2', 'Foo']},
     ], ['Text_Field']);
     await gristApi.deleteRecords('Table1', [5]);
 
@@ -290,7 +306,7 @@ describe("grist-api", function() {
     let data = await gristApi.fetchTable('Table1');
     assertData(data, [
       ...initialData.Table1,
-      ...myRange.map((n) => [5 + n, 'Chunk', n, null, 0, null])
+      ...myRange.map((n) => [5 + n, 'Chunk', n, null, 0, null, null])
     ]);
 
     // Update data using chunking.
@@ -302,7 +318,7 @@ describe("grist-api", function() {
     data = await gristApi.fetchTable('Table1');
     assertData(data, [
       ...initialData.Table1,
-      ...myRange.map((n) => [5 + n, 'Peanut Butter', n, null, 2, 'ORANGE'])
+      ...myRange.map((n) => [5 + n, 'Peanut Butter', n, null, 2, 'ORANGE', null])
     ]);
 
     // Delete data using chunking.

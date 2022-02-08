@@ -1,0 +1,17 @@
+GET /o/docs/api/docs/q5Cb8uYYJZjA/tables/Table1/data
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support updateRecords/1
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type, X-Requested-With
+cache-control: no-cache
+content-type: application/json; charset=utf-8
+date: Tue, 08 Feb 2022 15:59:29 GMT
+connection: close
+transfer-encoding: chunked
+
+{"id":[1,2,3,4],"manualSort":[1,2,3,4],"ColorRef":[2,2,3,2],"gristHelper_Display2":["Orange","Orange","Green","Orange"],"Num":[-5,8,12,-1.5],"Text_Field":["snapple","Orange","Melon",null],"Date":[1561507200,1556668800,1554163200,1551571200],"ChoiceList":[["L","Foo","Bar"],["L","Baz 2"],null,["L","Baz 2","Foo"]],"ColorRef_Value":["ORANGE","ORANGE","GREEN","ORANGE"]}
