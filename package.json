@@ -1,6 +1,6 @@
 {
   "name": "grist-api",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "NodeJS client for interacting with Grist",
   "main": "dist/index.js",
   "scripts": {
