@@ -1,0 +1,18 @@
+POST REGEXP /\/o\/[^\/]*\/api\/docs\/[^\/]*\/tables\/Table1\/data/
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support chunking/2
+body: {\"Text_Field\":[\"Chunk\",\"Chunk\",\"Chunk\",\"Chunk\",\"Chunk\",\"Chunk\",\"Chunk\",\"Chunk\",\"Chunk\",\"Chunk\",\"Chunk\",\"Chunk\"],\"Num\":[24,25,26,27,28,29,30,31,32,33,34,35]}
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type, X-Requested-With
+cache-control: no-cache
+content-type: application/json; charset=utf-8
+date: Tue, 08 Feb 2022 16:19:39 GMT
+connection: close
+transfer-encoding: chunked
+
+[29,30,31,32,33,34,35,36,37,38,39,40]

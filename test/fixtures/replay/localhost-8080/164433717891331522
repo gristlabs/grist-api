@@ -1,0 +1,18 @@
+PATCH REGEXP /\/o\/[^\/]*\/api\/docs\/[^\/]*\/tables\/Table1\/data/
+accept: application/json
+content-type: application/json
+x-request-num: grist-api should support updateRecords/0
+body: {\"id\":[1,4],\"Num\":[-5,-1.5],\"Text_Field\":[\"snapple\",null],\"ColorRef\":[2,2]}
+
+HTTP/1.1 200 OK
+x-powered-by: Express
+access-control-allow-credentials: true
+access-control-allow-methods: GET, PATCH, POST, DELETE, OPTIONS
+access-control-allow-headers: Authorization, Content-Type, X-Requested-With
+cache-control: no-cache
+content-type: application/json; charset=utf-8
+date: Tue, 08 Feb 2022 16:19:38 GMT
+connection: close
+transfer-encoding: chunked
+
+null

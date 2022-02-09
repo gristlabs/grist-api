@@ -4,6 +4,7 @@
 import axios, { Method } from 'axios';
 import * as _debug from 'debug';
 import chunk = require('lodash/chunk');
+import isEqual = require('lodash/isEqual');
 import mapValues = require('lodash/mapValues');
 import pick = require('lodash/pick');
 
@@ -15,7 +16,7 @@ const debug = _debug('grist-api');
 const debugReq = _debug('grist-api:requests');
 
 // Type for values in Grist data cells.
-export type CellValue = number|string|boolean|null|[string, any];
+export type CellValue = number|string|boolean|null|[string, ...any[]];
 
 // Record representing a row in a Grist table.
 export interface IRecord { [colId: string]: CellValue; }
@@ -222,9 +223,7 @@ export class GristDocAPI {
       const key = JSON.stringify(keyColIds.map((colId) => newRec[colId]));
       const oldRec = gristRows.get(key);
       if (oldRec) {
-        // TODO: This considers non-primitive values always distinct (e.g. ['d', 1234567]). On the
-        // other hand, it's unclear if non-primitive values are ever useful.
-        const changedKeys = Object.keys(newRec).filter((colId) => newRec[colId] !== oldRec[colId]);
+        const changedKeys = Object.keys(newRec).filter((colId) => !isEqual(newRec[colId], oldRec[colId]));
         if (changedKeys.length > 0) {
           debug("syncTable %s: #%s %s needs updates", tableName, oldRec.id, key,
             changedKeys.map((colId) => [colId, oldRec[colId], newRec[colId]]));
